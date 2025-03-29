@@ -1,0 +1,6 @@
+SPHERETRACING
+    GRID                    "./data/stanford-bunny.grid"
+        MATERIAL
+            COLOR           1 1 1
+        SCALE               10 10 10
+    DIRECTIONAL LIGHT       -1 -1 -1

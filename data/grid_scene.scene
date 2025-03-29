@@ -1,0 +1,19 @@
+SPHERETRACING
+    PLANE                   0 1 0 1
+        MATERIAL
+            COLOR           0 1 0
+    PLANE                   -1 0 0 1
+        MATERIAL
+            COLOR           1 0 0
+            REFLECTIVE      0.9
+    CUBE                    0 0 1 0.5
+        MATERIAL
+            COLOR           1 0 1
+    DIRECTIONAL LIGHT       0 -1 -1
+    POINT LIGHT             0 0 -1
+        COLOR               1 1 1
+        INTENSITY           10
+    GRID                    "data/example_grid.grid"
+        MATERIAL
+            COLOR           1 0 0
+        SCALE 1 1 2
