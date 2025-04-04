@@ -186,23 +186,27 @@ void updateBVH(std::vector<BVH> &bvhs) {
 }
 
 
-Application::Application(bool isSpheretracing) : Application{ { Light::Directional(LiteMath::float3(-1.0f, -1.0f, -1.0f)) }, isSpheretracing } {}
-Application::Application(std::vector<PreMesh> meshes) : Application{ { }, meshes } {}
-Application::Application(std::vector<Grid> grids) : Application{ { }, grids } {}
-Application::Application(std::vector<Octree> octrees) : Application{ { }, octrees } {}
-Application::Application(std::vector<Light> lights, bool isSphereTracing) : Application{ { Primitive{ .data = LiteMath::float4(0.0f, 0.0f, 0.0f, 1.0f), .type = 1 } }, lights, isSphereTracing } {}
-Application::Application(std::vector<PreMesh> meshes, std::vector<Light> lights) : Application{ { }, meshes, lights } {}
-Application::Application(std::vector<Grid> grids, std::vector<Light> lights) : Application{ { }, grids, lights } {}
-Application::Application(std::vector<Octree> octrees, std::vector<Light> lights) : Application{ { }, octrees, lights } {}
-Application::Application(std::vector<Primitive> primitives, bool isSpheretracing) : Application{ primitives, { Light::Directional(LiteMath::float3(-1.0f, -1.0f, -1.0f)) }, isSpheretracing } {}
-Application::Application(std::vector<Primitive> primitives, std::vector<PreMesh> meshes) : Application{ primitives, meshes, { Light::Directional(LiteMath::float3(-1.0f, -1.0f, -1.0f)) } } {}
-Application::Application(std::vector<Primitive> primitives, std::vector<Grid> grids) : Application{ primitives, grids, { Light::Directional(LiteMath::float3(-1.0f, -1.0f, -1.0f)) } } {}
-Application::Application(std::vector<Primitive> primitives, std::vector<Octree> octrees) : Application{ primitives, octrees, { Light::Directional(LiteMath::float3(-1.0f, -1.0f, -1.0f)) } } {}
+Application::Application(                                                                                            bool isSpheretracing) : Application{ { Light::Directional(LiteMath::float3(-1.0f, -1.0f, -1.0f)) }, isSpheretracing } {}
+Application::Application(std::vector<PreMesh>   meshes,                                                              bool isSpheretracing) : Application{ { }, meshes, isSpheretracing } {}
+Application::Application(std::vector<Grid>      grids,                                                               bool isSpheretracing) : Application{ { }, grids, isSpheretracing } {}
+Application::Application(std::vector<Octree>    octrees,                                                             bool isSpheretracing) : Application{ { }, octrees, isSpheretracing } {}
+Application::Application(std::vector<Light>     lights,                                                              bool isSpheretracing) : Application{ { Primitive{ .data = LiteMath::float4(0.0f, 0.0f, 0.0f, 1.0f), .type = 1 } }, lights, isSpheretracing } {}
+Application::Application(std::vector<Primitive> primitives,                                                          bool isSpheretracing) : Application{ primitives, { Light::Directional(LiteMath::float3(-1.0f, -1.0f, -1.0f)) }, isSpheretracing } {}
+Application::Application(std::vector<PreMesh>   meshes,     std::vector<Light>   lights,                             bool isSpheretracing) : Application{ { }, meshes, lights, isSpheretracing } {}
+Application::Application(std::vector<Grid>      grids,      std::vector<Light>   lights,                             bool isSpheretracing) : Application{ { }, grids, lights, isSpheretracing } {}
+Application::Application(std::vector<Octree>    octrees,    std::vector<Light>   lights,                             bool isSpheretracing) : Application{ { }, octrees, lights, isSpheretracing } {}
+Application::Application(std::vector<Primitive> primitives, std::vector<PreMesh> meshes,                             bool isSpheretracing) : Application{ primitives, meshes, { Light::Directional(LiteMath::float3(-1.0f, -1.0f, -1.0f)) }, isSpheretracing } {}
+Application::Application(std::vector<Primitive> primitives, std::vector<Grid>    grids,                              bool isSpheretracing) : Application{ primitives, grids, { Light::Directional(LiteMath::float3(-1.0f, -1.0f, -1.0f)) }, isSpheretracing } {}
+Application::Application(std::vector<Primitive> primitives, std::vector<Octree>  octrees,                            bool isSpheretracing) : Application{ primitives, octrees, { Light::Directional(LiteMath::float3(-1.0f, -1.0f, -1.0f)) }, isSpheretracing } {}
+Application::Application(std::vector<Primitive> primitives, std::vector<Light>   lights,                             bool isSpheretracing) : Application{ primitives, { }, { }, { }, lights, isSpheretracing } {}
+Application::Application(std::vector<Primitive> primitives, std::vector<PreMesh> meshes,  std::vector<Light> lights, bool isSpheretracing) : Application{ primitives, meshes, { }, { }, lights, isSpheretracing } {}
+Application::Application(std::vector<Primitive> primitives, std::vector<Grid>    grids,   std::vector<Light> lights, bool isSpheretracing) : Application{ primitives, { }, grids, { }, lights, isSpheretracing } {}
+Application::Application(std::vector<Primitive> primitives, std::vector<Octree>  octrees, std::vector<Light> lights, bool isSpheretracing) : Application{ primitives, { }, { }, octrees, lights, isSpheretracing } {}
 
-Application::Application(std::vector<Primitive> primitives, std::vector<Light> lights, bool isSphereTracing) : _Primitives{ primitives }, _Lights{ lights }, _isSphereTracing{ isSphereTracing } {
+Application::Application(std::vector<Primitive> primitives, std::vector<PreMesh> meshes, std::vector<Grid> grids, std::vector<Octree> octrees, std::vector<Light> lights, bool isSpheretracing) : _Primitives{ primitives }, _Meshes{ meshes }, _Grids{ grids }, _Octrees{ octrees }, _Lights{ lights }, _isSphereTracing{ isSpheretracing } {
     _pixels.resize(WIDTH * HEIGHT);
 
-    if (_isSphereTracing) {
+    if (isSpheretracing) {
         createSpheretracingPipelineLayout();
         createSpheretracingPipeline();
     } else {
@@ -213,40 +217,19 @@ Application::Application(std::vector<Primitive> primitives, std::vector<Light> l
     createCommandBuffers();
 }
 
-Application::Application(std::vector<Primitive> primitives, std::vector<PreMesh> meshes, std::vector<Light> lights) : _Primitives{ primitives }, _Meshes{ meshes }, _Lights{ lights }, _isSphereTracing{ false } {
-    _pixels.resize(WIDTH * HEIGHT);
-
-    createRaytracingPipelineLayout();
-    createRaytracingPipeline();
-
-    createCommandBuffers();
-}
-Application::Application(std::vector<Primitive> primitives, std::vector<Grid> grids, std::vector<Light> lights) : Application{ primitives, grids, { }, lights } {}
-Application::Application(std::vector<Primitive> primitives, std::vector<Octree> octrees, std::vector<Light> lights) : Application{ primitives, { }, octrees, lights } {}
-
-Application::Application(std::vector<Primitive> primitives, std::vector<Grid> grids, std::vector<Octree> octrees, std::vector<Light> lights) : _Primitives{ primitives }, _Grids{ grids }, _Octrees{ octrees }, _Lights{ lights }, _isSphereTracing{ true } {
-    _pixels.resize(WIDTH * HEIGHT);
-
-    createSpheretracingPipelineLayout();
-    createSpheretracingPipeline();
-
-    createCommandBuffers();
-}
-
 Application::~Application() {
+    vkDestroyBuffer(_device.device(), _shaderStorageBufferGrids, nullptr);
+    vkFreeMemory(_device.device(), _shaderStorageBufferGridsMemory, nullptr);
+    vkDestroyBuffer(_device.device(), _shaderStorageBufferGridDistances, nullptr);
+    vkFreeMemory(_device.device(), _shaderStorageBufferGridDistancesMemory, nullptr);
+    vkDestroyBuffer(_device.device(), _shaderStorageBufferOctreeNodes, nullptr);
+    vkFreeMemory(_device.device(), _shaderStorageBufferOctreeNodesMemory, nullptr);
+    vkDestroyBuffer(_device.device(), _shaderStorageBufferOctrees, nullptr);
+    vkFreeMemory(_device.device(), _shaderStorageBufferOctreesMemory, nullptr);
     vkDestroyBuffer(_device.device(), _shaderStorageBufferLights, nullptr);
     vkFreeMemory(_device.device(), _shaderStorageBufferLightsMemory, nullptr);
 
-    if (_isSphereTracing) {
-        vkDestroyBuffer(_device.device(), _shaderStorageBufferGrids, nullptr);
-        vkFreeMemory(_device.device(), _shaderStorageBufferGridsMemory, nullptr);
-        vkDestroyBuffer(_device.device(), _shaderStorageBufferGridDistances, nullptr);
-        vkFreeMemory(_device.device(), _shaderStorageBufferGridDistancesMemory, nullptr);
-        vkDestroyBuffer(_device.device(), _shaderStorageBufferOctreeNodes, nullptr);
-        vkFreeMemory(_device.device(), _shaderStorageBufferOctreeNodesMemory, nullptr);
-        vkDestroyBuffer(_device.device(), _shaderStorageBufferOctrees, nullptr);
-        vkFreeMemory(_device.device(), _shaderStorageBufferOctreesMemory, nullptr);
-    } else {
+    if (!_isSphereTracing) {
         vkDestroyBuffer(_device.device(), _shaderStorageBufferBVHs, nullptr);
         vkFreeMemory(_device.device(), _shaderStorageBufferBVHsMemory, nullptr);
         vkDestroyBuffer(_device.device(), _shaderStorageBufferTriangles, nullptr);
@@ -581,7 +564,7 @@ VkDescriptorBufferInfo Application::createCountedBuffer(const std::vector<T>& da
 }
 
 void Application::createRaytracingPipelineLayout() {
-    std::array<VkDescriptorSetLayoutBinding, 9> layoutBindings{};
+    std::array<VkDescriptorSetLayoutBinding, 13> layoutBindings{};
     layoutBindings[0].binding = 0;
     layoutBindings[0].descriptorCount = 1;
     layoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -636,6 +619,30 @@ void Application::createRaytracingPipelineLayout() {
     layoutBindings[8].pImmutableSamplers = nullptr;
     layoutBindings[8].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
+    layoutBindings[9].binding = 9;
+    layoutBindings[9].descriptorCount = 1;
+    layoutBindings[9].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    layoutBindings[9].pImmutableSamplers = nullptr;
+    layoutBindings[9].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+    layoutBindings[10].binding = 10;
+    layoutBindings[10].descriptorCount = 1;
+    layoutBindings[10].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    layoutBindings[10].pImmutableSamplers = nullptr;
+    layoutBindings[10].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+    layoutBindings[11].binding = 11;
+    layoutBindings[11].descriptorCount = 1;
+    layoutBindings[11].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    layoutBindings[11].pImmutableSamplers = nullptr;
+    layoutBindings[11].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+    layoutBindings[12].binding = 12;
+    layoutBindings[12].descriptorCount = 1;
+    layoutBindings[12].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    layoutBindings[12].pImmutableSamplers = nullptr;
+    layoutBindings[12].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
     VkDescriptorSetLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     layoutInfo.bindingCount = static_cast<uint32_t>(layoutBindings.size());
@@ -670,7 +677,7 @@ void Application::createRaytracingPipeline() {
     poolSizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     poolSizes[1].descriptorCount = 1;
     poolSizes[2].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    poolSizes[2].descriptorCount = 7;
+    poolSizes[2].descriptorCount = 11;
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -742,7 +749,7 @@ void Application::createRaytracingPipeline() {
         .index = triOffset
     });
 
-    std::array<VkWriteDescriptorSet, 9> descriptorWrites{};
+    std::array<VkWriteDescriptorSet, 13> descriptorWrites{};
 
     VkDescriptorBufferInfo uniformBufferInfo = createUniformBuffer();
     descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -824,6 +831,71 @@ void Application::createRaytracingPipeline() {
     descriptorWrites[8].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     descriptorWrites[8].descriptorCount = 1;
     descriptorWrites[8].pBufferInfo = &storageBufferLights;
+
+    std::vector<float> gridDistances;
+    std::vector<GridData> grids;
+    grids.reserve(_Grids.size());
+    for (const auto& i : _Grids) {
+        SdfGrid grid;
+        load_sdf_grid(grid, i.name);
+        grids.push_back({
+            .index = static_cast<unsigned>(gridDistances.size()),
+            .size = grid.size,
+            .material = i.material,
+            .inverseModel = i.inverseModel
+        });
+        gridDistances.insert(gridDistances.end(), grid.data.begin(), grid.data.end());
+    }
+
+    VkDescriptorBufferInfo storageBufferGridDistances = createBuffer<float>(gridDistances, _shaderStorageBufferGridDistances, _shaderStorageBufferGridDistancesMemory);
+    descriptorWrites[9].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptorWrites[9].dstSet = _computeDescriptorSet;
+    descriptorWrites[9].dstBinding = 9;
+    descriptorWrites[9].dstArrayElement = 0;
+    descriptorWrites[9].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    descriptorWrites[9].descriptorCount = 1;
+    descriptorWrites[9].pBufferInfo = &storageBufferGridDistances;
+
+    VkDescriptorBufferInfo storageBufferGrids = createCountedBuffer<GridData>(grids, _shaderStorageBufferGrids, _shaderStorageBufferGridsMemory);
+    descriptorWrites[10].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptorWrites[10].dstSet = _computeDescriptorSet;
+    descriptorWrites[10].dstBinding = 10;
+    descriptorWrites[10].dstArrayElement = 0;
+    descriptorWrites[10].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    descriptorWrites[10].descriptorCount = 1;
+    descriptorWrites[10].pBufferInfo = &storageBufferGrids;
+
+    std::vector<SdfOctreeNode> nodes;
+    std::vector<OctreeData> octrees;
+    octrees.reserve(_Octrees.size());
+    for (const auto& i : _Octrees) {
+        SdfOctree octree;
+        load_sdf_octree(octree, i.name);
+        octrees.push_back({
+            .index = static_cast<unsigned>(nodes.size()),
+            .material = i.material,
+            .inverseModel = i.inverseModel
+        });
+        nodes.insert(nodes.end(), octree.nodes.begin(), octree.nodes.end());
+    }
+
+    VkDescriptorBufferInfo storageBufferOctreeNodes = createBuffer<SdfOctreeNode>(nodes, _shaderStorageBufferOctreeNodes, _shaderStorageBufferOctreeNodesMemory);
+    descriptorWrites[11].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptorWrites[11].dstSet = _computeDescriptorSet;
+    descriptorWrites[11].dstBinding = 11;
+    descriptorWrites[11].dstArrayElement = 0;
+    descriptorWrites[11].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    descriptorWrites[11].descriptorCount = 1;
+    descriptorWrites[11].pBufferInfo = &storageBufferOctreeNodes;
+
+    VkDescriptorBufferInfo storageBufferOctrees = createCountedBuffer<OctreeData>(octrees, _shaderStorageBufferOctrees, _shaderStorageBufferOctreesMemory);
+    descriptorWrites[12].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptorWrites[12].dstSet = _computeDescriptorSet;
+    descriptorWrites[12].dstBinding = 12;
+    descriptorWrites[12].dstArrayElement = 0;
+    descriptorWrites[12].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    descriptorWrites[12].descriptorCount = 1;
+    descriptorWrites[12].pBufferInfo = &storageBufferOctrees;
 
     vkUpdateDescriptorSets(_device.device(), descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
 

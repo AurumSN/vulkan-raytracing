@@ -682,8 +682,9 @@ int main(int argc, char *argv[]) {
             .name = input_path
         };
 
+        
+        std::cout << __LINE__ << std::endl;
         Application app{ { grid } };
-
         try {
             app.run();
         } catch (const std::exception &e) {
@@ -866,7 +867,7 @@ int main(int argc, char *argv[]) {
         }
 
         if (isSphere) {
-            Application app{ primitives, grids, octrees, lights };
+            Application app{ primitives, meshes, grids, octrees, lights, true };
 
             try {
                 app.run();
@@ -875,7 +876,7 @@ int main(int argc, char *argv[]) {
                 return EXIT_FAILURE;
             }
         } else {
-            Application app{ primitives, meshes, lights };
+            Application app{ primitives, meshes, grids, octrees, lights };
 
             try {
                 app.run();

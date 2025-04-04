@@ -178,6 +178,10 @@ class Application {
     VkBuffer _shaderStorageBufferOctrees;
     VkDeviceMemory _shaderStorageBufferOctreesMemory;
 
+    VkBuffer _stagingImageBuffer;
+    VkDeviceMemory _stagingImageBufferMemory;
+    void* _stagingImageBufferMemoryMapped;
+
     VkDescriptorBufferInfo createUniformBuffer();
     VkDescriptorImageInfo createOutputImageBuffer();
     template<typename T>
@@ -204,22 +208,22 @@ public:
     static constexpr int HEIGHT = 600;
 
     Application(bool isSpheretracing = false);
-    Application(std::vector<PreMesh> meshes);
-    Application(std::vector<Grid> grids);
-    Application(std::vector<Octree> octrees);
+    Application(std::vector<PreMesh> meshes, bool isSpheretracing = false);
+    Application(std::vector<Grid> grids, bool isSpheretracing = false);
+    Application(std::vector<Octree> octrees, bool isSpheretracing = false);
     Application(std::vector<Light> lights, bool isSphereTracing = false);
-    Application(std::vector<PreMesh> meshes, std::vector<Light> lights);
-    Application(std::vector<Grid> grids, std::vector<Light> lights);
-    Application(std::vector<Octree> octrees, std::vector<Light> lights);
+    Application(std::vector<PreMesh> meshes, std::vector<Light> lights, bool isSpheretracing = false);
+    Application(std::vector<Grid> grids, std::vector<Light> lights, bool isSpheretracing = false);
+    Application(std::vector<Octree> octrees, std::vector<Light> lights, bool isSpheretracing = false);
     Application(std::vector<Primitive> primitives, bool isSpheretracing = false);
-    Application(std::vector<Primitive> primitives, std::vector<PreMesh> meshes);
-    Application(std::vector<Primitive> primitives, std::vector<Grid> grids);
-    Application(std::vector<Primitive> primitives, std::vector<Octree> octrees);
+    Application(std::vector<Primitive> primitives, std::vector<PreMesh> meshes, bool isSpheretracing = false);
+    Application(std::vector<Primitive> primitives, std::vector<Grid> grids, bool isSpheretracing = false);
+    Application(std::vector<Primitive> primitives, std::vector<Octree> octrees, bool isSpheretracing = false);
     Application(std::vector<Primitive> primitives, std::vector<Light> lights, bool isSphereTracing = false);
-    Application(std::vector<Primitive> primitives, std::vector<PreMesh> meshes, std::vector<Light> lights);
-    Application(std::vector<Primitive> primitives, std::vector<Grid> grids, std::vector<Light> lights);
-    Application(std::vector<Primitive> primitives, std::vector<Octree> octrees, std::vector<Light> lights);
-    Application(std::vector<Primitive> primitives, std::vector<Grid> grids, std::vector<Octree> octrees, std::vector<Light> lights);
+    Application(std::vector<Primitive> primitives, std::vector<PreMesh> meshes, std::vector<Light> lights, bool isSpheretracing = false);
+    Application(std::vector<Primitive> primitives, std::vector<Grid> grids, std::vector<Light> lights, bool isSpheretracing = false);
+    Application(std::vector<Primitive> primitives, std::vector<Octree> octrees, std::vector<Light> lights, bool isSpheretracing = false);
+    Application(std::vector<Primitive> primitives, std::vector<PreMesh> meshes, std::vector<Grid> grids, std::vector<Octree> octrees, std::vector<Light> lights, bool isSpheretracing = false);
     ~Application();
 
     Application(const Application&) = delete;

@@ -168,7 +168,7 @@ float signedDistanceGrid(vec4 position, Grid grid) {
 }
 
 float signedDistanceOctree(Ray ray, Octree octree) {
-    
+    return 0.0;
 }
 
 Distance minDistance(vec4 position) {

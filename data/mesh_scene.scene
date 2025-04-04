@@ -14,6 +14,10 @@ RAYTRACING
             COLOR           0 0 0
             REFLECTIVE      0.9
         SCALE               10 10 10
+    GRID                    "./data/stanford-bunny.grid"
+        MATERIAL
+            COLOR           1 1 0
+        POSITION            -1 0 -1
     DIRECTIONAL LIGHT       0 -1 -1
     POINT LIGHT             0 0 -1
         COLOR               1 1 1
