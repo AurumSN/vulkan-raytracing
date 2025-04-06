@@ -713,7 +713,7 @@ void Application::createRaytracingPipeline() {
     );
 
     std::array<VkDescriptorPoolSize, 1> graphicsPoolSizes{};
-    graphicsPoolSizes[0].type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+    graphicsPoolSizes[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     graphicsPoolSizes[0].descriptorCount = SwapChain::MAX_FRAMES_IN_FLIGHT;
 
     VkDescriptorPoolCreateInfo graphicsPoolInfo{};
