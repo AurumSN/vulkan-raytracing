@@ -6,9 +6,11 @@
 #include "LiteMath/LiteMath.h"
 #include "mesh.h"
 #include "octree.h"
+#include "swapchain.h"
 
 #include <memory>
 #include <vector>
+#include <array>
 
 struct UniformBufferObject {
     int width;
@@ -104,6 +106,16 @@ struct Octree {
     LiteMath::float4x4 inverseModel;
 };
 
+struct OctreeNode {
+    float values[8];
+    unsigned offset;
+    unsigned escape;
+    unsigned _1;
+    unsigned _2;
+    LiteMath::float4 min;
+    LiteMath::float4 max;
+};
+
 struct OctreeData {
     unsigned index;
     unsigned _1;
@@ -119,6 +131,7 @@ void buildBVH(const std::vector<LiteMath::float4>& vertices, const std::vector<u
 void updateBVH(std::vector<BVH>& bvhs);
 
 class Application {
+
     std::vector<Primitive> _Primitives;
     std::vector<PreMesh> _Meshes;
     std::vector<Light> _Lights;
@@ -127,23 +140,28 @@ class Application {
 
     Window _window{ WIDTH, HEIGHT, "Hello Vulkan!" };
     Device _device{ _window };
+    SwapChain _swapChain{ _device, _window.getExtent() };
     std::unique_ptr<Pipeline> _pipeline;
-    VkPipelineLayout _pipelineLayout;
-    VkCommandBuffer _commandBuffer;
+    VkPipelineLayout _graphicsPipelineLayout;
+    VkPipelineLayout _computePipelineLayout;
+    std::vector<VkCommandBuffer> _commandBuffers;
+    std::array<VkCommandBuffer, SwapChain::MAX_FRAMES_IN_FLIGHT> _computeCommandBuffers;
+    VkDescriptorSetLayout _graphicsDescriptorSetLayout;
     VkDescriptorSetLayout _computeDescriptorSetLayout;
-    VkImage _image;
-    VkDeviceMemory _imageMemory;
-    VkImageView _imageView;
-    VkSampler _imageSampler;
-    VkDescriptorSet _computeDescriptorSet;
+    std::array<VkImage, SwapChain::MAX_FRAMES_IN_FLIGHT> _images;
+    std::array<VkDeviceMemory, SwapChain::MAX_FRAMES_IN_FLIGHT> _imagesMemory;
+    std::array<VkImageView, SwapChain::MAX_FRAMES_IN_FLIGHT> _imagesView;
+    std::array<VkSampler, SwapChain::MAX_FRAMES_IN_FLIGHT> _imagesSampler;
+    std::array<VkDescriptorSet, SwapChain::MAX_FRAMES_IN_FLIGHT> _graphicsDescriptorSets;
+    std::array<VkDescriptorSet, SwapChain::MAX_FRAMES_IN_FLIGHT> _computeDescriptorSets;
     VkDescriptorPool _descriptorPool;
-    VkFence _computeInFlightFence;
-    VkSemaphore _computeFinishedSemaphore;
-    std::vector<uint32_t> _pixels;
+    VkDescriptorPool _graphicsDescriptorPool;
+    std::array<VkFence, SwapChain::MAX_FRAMES_IN_FLIGHT> _computeInFlightFences;
+    std::array<VkSemaphore, SwapChain::MAX_FRAMES_IN_FLIGHT> _computeFinishedSemaphores;
 
-    VkBuffer _uniformBuffer;
-    void *_uniformBufferMapped;
-    VkDeviceMemory _uniformBufferMemory;
+    std::array<VkBuffer, SwapChain::MAX_FRAMES_IN_FLIGHT> _uniformBuffers;
+    std::array<void *, SwapChain::MAX_FRAMES_IN_FLIGHT> _uniformBuffersMapped;
+    std::array<VkDeviceMemory, SwapChain::MAX_FRAMES_IN_FLIGHT> _uniformBuffersMemory;
 
     VkBuffer _shaderStorageBufferPrimitves;
     VkDeviceMemory _shaderStorageBufferPrimitvesMemory;
@@ -182,19 +200,17 @@ class Application {
     VkDeviceMemory _stagingImageBufferMemory;
     void* _stagingImageBufferMemoryMapped;
 
-    VkDescriptorBufferInfo createUniformBuffer();
-    VkDescriptorImageInfo createOutputImageBuffer();
+    VkDescriptorBufferInfo createUniformBuffer(size_t frame);
+    VkDescriptorImageInfo createOutputImageBuffer(size_t frame);
     template<typename T>
     VkDescriptorBufferInfo createBuffer(const std::vector<T>& data, VkBuffer& buffer, VkDeviceMemory& memory, bool withOffset = true);
     template<typename T>
     VkDescriptorBufferInfo createCountedBuffer(const std::vector<T>& data, VkBuffer& buffer, VkDeviceMemory& memory, bool withOffset = true);
+    void createGraphicsPipelineLayout();
     void createRaytracingPipelineLayout();
     void createRaytracingPipeline();
-    void createSpheretracingPipelineLayout();
-    void createSpheretracingPipeline();
     void createCommandBuffers();
-    void updateUniformBuffer();
-    void updateOutputImageData();
+    void updateUniformBuffer(uint32_t currentImage);
     void drawFrame();
 
     float phi = 0.0f;
@@ -207,23 +223,23 @@ public:
     static constexpr int WIDTH = 800;
     static constexpr int HEIGHT = 600;
 
-    Application(bool isSpheretracing = false);
-    Application(std::vector<PreMesh> meshes, bool isSpheretracing = false);
-    Application(std::vector<Grid> grids, bool isSpheretracing = false);
-    Application(std::vector<Octree> octrees, bool isSpheretracing = false);
-    Application(std::vector<Light> lights, bool isSphereTracing = false);
-    Application(std::vector<PreMesh> meshes, std::vector<Light> lights, bool isSpheretracing = false);
-    Application(std::vector<Grid> grids, std::vector<Light> lights, bool isSpheretracing = false);
-    Application(std::vector<Octree> octrees, std::vector<Light> lights, bool isSpheretracing = false);
-    Application(std::vector<Primitive> primitives, bool isSpheretracing = false);
-    Application(std::vector<Primitive> primitives, std::vector<PreMesh> meshes, bool isSpheretracing = false);
-    Application(std::vector<Primitive> primitives, std::vector<Grid> grids, bool isSpheretracing = false);
-    Application(std::vector<Primitive> primitives, std::vector<Octree> octrees, bool isSpheretracing = false);
-    Application(std::vector<Primitive> primitives, std::vector<Light> lights, bool isSphereTracing = false);
-    Application(std::vector<Primitive> primitives, std::vector<PreMesh> meshes, std::vector<Light> lights, bool isSpheretracing = false);
-    Application(std::vector<Primitive> primitives, std::vector<Grid> grids, std::vector<Light> lights, bool isSpheretracing = false);
-    Application(std::vector<Primitive> primitives, std::vector<Octree> octrees, std::vector<Light> lights, bool isSpheretracing = false);
-    Application(std::vector<Primitive> primitives, std::vector<PreMesh> meshes, std::vector<Grid> grids, std::vector<Octree> octrees, std::vector<Light> lights, bool isSpheretracing = false);
+    Application();
+    Application(std::vector<PreMesh> meshes);
+    Application(std::vector<Grid> grids);
+    Application(std::vector<Octree> octrees);
+    Application(std::vector<Light> lights);
+    Application(std::vector<PreMesh> meshes, std::vector<Light> lights);
+    Application(std::vector<Grid> grids, std::vector<Light> lights);
+    Application(std::vector<Octree> octrees, std::vector<Light> lights);
+    Application(std::vector<Primitive> primitives);
+    Application(std::vector<Primitive> primitives, std::vector<PreMesh> meshes);
+    Application(std::vector<Primitive> primitives, std::vector<Grid> grids);
+    Application(std::vector<Primitive> primitives, std::vector<Octree> octrees);
+    Application(std::vector<Primitive> primitives, std::vector<Light> lights);
+    Application(std::vector<Primitive> primitives, std::vector<PreMesh> meshes, std::vector<Light> lights);
+    Application(std::vector<Primitive> primitives, std::vector<Grid> grids, std::vector<Light> lights);
+    Application(std::vector<Primitive> primitives, std::vector<Octree> octrees, std::vector<Light> lights);
+    Application(std::vector<Primitive> primitives, std::vector<PreMesh> meshes, std::vector<Grid> grids, std::vector<Octree> octrees, std::vector<Light> lights);
     ~Application();
 
     Application(const Application&) = delete;

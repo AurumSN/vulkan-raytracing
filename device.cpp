@@ -42,7 +42,6 @@ void DestroyDebugUtilsMessengerEXT(
     }
 }
 
-// class member functions
 Device::Device(Window &window) : _window{window} {
     createInstance();
     setupDebugMessenger();
@@ -60,7 +59,7 @@ Device::~Device() {
         DestroyDebugUtilsMessengerEXT(_instance, _debugMessenger, nullptr);
     }
 
-    // vkDestroySurfaceKHR(_instance, _surface, nullptr);
+    vkDestroySurfaceKHR(_instance, _surface, nullptr);
     vkDestroyInstance(_instance, nullptr);
 }
 
@@ -133,7 +132,7 @@ void Device::createLogicalDevice() {
     QueueFamilyIndices indices = findQueueFamilies(_physicalDevice);
 
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-    std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily/*, indices.presentFamily*/};
+    std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily, indices.presentFamily};
 
     float queuePriority = 1.0f;
     for (uint32_t queueFamily : uniqueQueueFamilies) {
@@ -158,8 +157,6 @@ void Device::createLogicalDevice() {
     createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
     createInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
-    // might not really be necessary anymore because device specific validation layers
-    // have been deprecated
     if (enableValidationLayers) {
         createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
         createInfo.ppEnabledLayerNames = validationLayers.data();
@@ -172,7 +169,8 @@ void Device::createLogicalDevice() {
     }
 
     vkGetDeviceQueue(_device, indices.graphicsFamily, 0, &_graphicsQueue);
-    // vkGetDeviceQueue(_device, indices.presentFamily, 0, &_presentQueue);
+    vkGetDeviceQueue(_device, indices.graphicsFamily, 0, &_computeQueue);
+    vkGetDeviceQueue(_device, indices.presentFamily, 0, &_presentQueue);
 }
 
 void Device::createCommandPool() {
@@ -196,16 +194,16 @@ bool Device::isDeviceSuitable(VkPhysicalDevice device) {
 
     bool extensionsSupported = checkDeviceExtensionSupport(device);
 
-    // bool swapChainAdequate = false;
-    // if (extensionsSupported) {
-    //     SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device);
-    //     swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
-    // }
+    bool swapChainAdequate = false;
+    if (extensionsSupported) {
+        SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device);
+        swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
+    }
 
     VkPhysicalDeviceFeatures supportedFeatures;
     vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
 
-    return indices.isComplete() && extensionsSupported /*&& swapChainAdequate*/ &&
+    return indices.isComplete() && extensionsSupported && swapChainAdequate &&
                  supportedFeatures.samplerAnisotropy;
 }
 
@@ -219,7 +217,7 @@ void Device::populateDebugMessengerCreateInfo(
                                                      VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
                                                      VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
     createInfo.pfnUserCallback = debugCallback;
-    createInfo.pUserData = nullptr;    // Optional
+    createInfo.pUserData = nullptr;
 }
 
 void Device::setupDebugMessenger() {
@@ -259,10 +257,8 @@ bool Device::checkValidationLayerSupport() {
 std::vector<const char *> Device::getRequiredExtensions() {
     uint32_t glfwExtensionCount = 0;
     const char **glfwExtensions;
-    // glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
     SDL_Vulkan_GetInstanceExtensions(_window.window(), &glfwExtensionCount, nullptr);
 
-    // std::vector<const char *> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
     std::vector<const char *> extensions(glfwExtensionCount);
     SDL_Vulkan_GetInstanceExtensions(_window.window(), &glfwExtensionCount, extensions.data());
 
@@ -327,17 +323,18 @@ QueueFamilyIndices Device::findQueueFamilies(VkPhysicalDevice device) {
 
     int i = 0;
     for (const auto &queueFamily : queueFamilies) {
-        if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+        if (queueFamily.queueCount > 0 && (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) && (queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT)) {
             indices.graphicsFamily = i;
             indices.graphicsFamilyHasValue = true;
         }
-        // VkBool32 presentSupport = false;
-        // vkGetPhysicalDeviceSurfaceSupportKHR(device, i, _surface, &presentSupport);
-        // if (queueFamily.queueCount > 0 && presentSupport) {
-        //     indices.presentFamily = i;
-        //     indices.presentFamilyHasValue = true;
-        // }
-        indices.presentFamilyHasValue = true; // <---
+        VkBool32 presentSupport = false;
+        vkGetPhysicalDeviceSurfaceSupportKHR(device, i, _surface, &presentSupport);
+
+        if (queueFamily.queueCount > 0 && presentSupport) {
+            indices.presentFamily = i;
+            indices.presentFamilyHasValue = true;
+        }
+
         if (indices.isComplete()) {
             break;
         }
@@ -470,8 +467,8 @@ void Device::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize siz
     VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
     VkBufferCopy copyRegion{};
-    copyRegion.srcOffset = 0;    // Optional
-    copyRegion.dstOffset = 0;    // Optional
+    copyRegion.srcOffset = 0;
+    copyRegion.dstOffset = 0;
     copyRegion.size = size;
     vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 

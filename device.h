@@ -32,6 +32,7 @@ class Device {
     VkSurfaceKHR _surface;
     VkQueue _graphicsQueue;
     VkQueue _presentQueue;
+    VkQueue _computeQueue;
 
     const std::vector<const char *> validationLayers = {"VK_LAYER_KHRONOS_validation"};
     const std::vector<const char *> deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
@@ -79,6 +80,10 @@ public:
 
     VkQueue graphicsQueue() {
         return _graphicsQueue;
+    }
+
+    VkQueue computeQueue() {
+        return _computeQueue;
     }
 
     VkQueue presentQueue() {

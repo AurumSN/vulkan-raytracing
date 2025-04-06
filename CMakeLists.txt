@@ -23,7 +23,8 @@ add_executable(render
     pipeline.cpp
     window.cpp
     grid.cpp
-    octree.cpp)
+    octree.cpp
+    swapchain.cpp)
 
 file(GLOB_RECURSE GLSL_SOURCE_FILES CONFIGURE_DEPENDS
         "${PROJECT_SOURCE_DIR}/shaders/*.frag"

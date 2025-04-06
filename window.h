@@ -13,8 +13,6 @@ class Window {
     const int _height;
     std::string _name;
     bool _running;
-    SDL_Renderer *_renderer;
-    SDL_Texture *_texture;
 
     Window(const Window&) = delete;
     Window& operator=(const Window&) = delete;
@@ -33,7 +31,7 @@ public:
         _running = false;
     }
     
+    VkExtent2D getExtent();
+    
     void createWindowSurface(VkInstance instance, VkSurfaceKHR *surface);
-
-    void draw(const uint32_t *pixels);
 };
