@@ -1,6 +1,8 @@
 #version 450
 
 #define USE_SPHERE_TRACING
+// #define USE_AMBIENT_OCCLUSION
+// #define CLASSIC_AMBIENT_OCCLUSION
 // #define USE_ANALYTIC
 // #define USE_NEWTOWNS
 
@@ -130,6 +132,7 @@ struct Hit {
     vec2 uv;
     Material material;
     bool receivesShadows;
+    float ambientOcclusion;
 };
 
 Hit noHit() {
@@ -138,14 +141,31 @@ Hit noHit() {
     return h;
 }
 
-Hit isHit(float t, Ray ray, vec4 normal, vec2 uv, Material material, bool receivesShadows) {
+Hit isHit(float t, Ray ray, vec4 normal, vec2 uv, Material material) {
     Hit h;
     h.t = t;
     h.point = ray.origin + ray.direction * t * 0.9999;
     h.normal = normal,
     h.uv = uv;
     h.material = material;
-    h.receivesShadows = receivesShadows;
+    h.receivesShadows = true;
+    h.ambientOcclusion = 1.0;
+    return h;
+}
+
+Hit isSTHit(float t, Ray ray, vec4 normal, vec2 uv, Material material, float ambientOcclusion) {
+    Hit h;
+    h.t = t;
+    h.point = ray.origin + ray.direction * t * 0.9999;
+    h.normal = normal,
+    h.uv = uv;
+    h.material = material;
+    h.receivesShadows = false;
+#ifdef USE_AMBIENT_OCLUSION
+    h.ambientOcclusion = ambientOcclusion;
+#else
+    h.ambientOcclusion = 1.0;
+#endif
     return h;
 }
 
@@ -231,7 +251,7 @@ Hit hitPlane(vec4 plane, Ray ray, Material material) {
             normal = -normal;
         }
 
-        return isHit(t, ray, normal, vec2(0.0, 0.0), material, true);
+        return isHit(t, ray, normal, vec2(0.0, 0.0), material);
     }
 
     return noHit();
@@ -268,7 +288,7 @@ Hit hitSphere(vec4 sphere, Ray ray, Material material) {
 
     vec4 normal = normalize(ray.origin + ray.direction * t0 - vec4(sphere.xyz, 1.0));
 
-    return isHit(t0, ray, normal, vec2(0.0, 0.0), material, true);
+    return isHit(t0, ray, normal, vec2(0.0, 0.0), material);
 }
 
 Hit hitCube(vec4 cube, Ray ray, Material material) {
@@ -280,29 +300,29 @@ Hit hitCube(vec4 cube, Ray ray, Material material) {
     if (abs(d.x) > abs(d.y)) {
         if (abs(d.x) > abs(d.z)) {
             if (d.x > 0.0) {
-                return isHit(t, ray, vec4(1.0, 0.0, 0.0, 0.0), vec2(0.0, 0.0), material, true);
+                return isHit(t, ray, vec4(1.0, 0.0, 0.0, 0.0), vec2(0.0, 0.0), material);
             } else {
-                return isHit(t, ray, vec4(-1.0, 0.0, 0.0, 0.0), vec2(0.0, 0.0), material, true);
+                return isHit(t, ray, vec4(-1.0, 0.0, 0.0, 0.0), vec2(0.0, 0.0), material);
             }
         } else {
             if (d.z > 0.0) {
-                return isHit(t, ray, vec4(0.0, 0.0, 1.0, 0.0), vec2(0.0, 0.0), material, true);
+                return isHit(t, ray, vec4(0.0, 0.0, 1.0, 0.0), vec2(0.0, 0.0), material);
             } else {
-                return isHit(t, ray, vec4(0.0, 0.0, -1.0, 0.0), vec2(0.0, 0.0), material, true);
+                return isHit(t, ray, vec4(0.0, 0.0, -1.0, 0.0), vec2(0.0, 0.0), material);
             }
         }
     } else {
         if (abs(d.y) > abs(d.z)) {
             if (d.y > 0.0) {
-                return isHit(t, ray, vec4(0.0, 1.0, 0.0, 0.0), vec2(0.0, 0.0), material, true);
+                return isHit(t, ray, vec4(0.0, 1.0, 0.0, 0.0), vec2(0.0, 0.0), material);
             } else {
-                return isHit(t, ray, vec4(0.0, -1.0, 0.0, 0.0), vec2(0.0, 0.0), material, true);
+                return isHit(t, ray, vec4(0.0, -1.0, 0.0, 0.0), vec2(0.0, 0.0), material);
             }
         } else {
             if (d.z > 0.0) {
-                return isHit(t, ray, vec4(0.0, 0.0, 1.0, 0.0), vec2(0.0, 0.0), material, true);
+                return isHit(t, ray, vec4(0.0, 0.0, 1.0, 0.0), vec2(0.0, 0.0), material);
             } else {
-                return isHit(t, ray, vec4(0.0, 0.0, -1.0, 0.0), vec2(0.0, 0.0), material, true);
+                return isHit(t, ray, vec4(0.0, 0.0, -1.0, 0.0), vec2(0.0, 0.0), material);
             }
         }
     }
@@ -346,7 +366,7 @@ Hit hitPolygon(uint triangle, Ray ray, Material material) {
             return noHit();
             // normal = -normal;
         }
-        return isHit(t, ray, normal, vec2(u, v), material, true);
+        return isHit(t, ray, normal, vec2(u, v), material);
     }
 
     return noHit();
@@ -475,6 +495,58 @@ vec4 getGridNormal(vec4 position, Grid grid) {
     return normal;
 }
 
+#define HASHSCALE1 .1031
+float hash(float p) {
+	vec3 p3  = fract(vec3(p) * HASHSCALE1);
+    p3 += dot(p3, p3.yzx + 19.19);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+vec4 randomSphereDir(vec2 rnd) {
+    float s = rnd.x * pi * 2.0;
+    float t = rnd.y * 2.0 - 1.0;
+    return vec4(sin(s), cos(s), t, 0.0) / sqrt(1.0 + t * t);
+}
+
+vec4 randomHemisphereDir(vec4 dir, float i) {
+    vec4 v = randomSphereDir(vec2(hash(i + 1.0), hash(i + 2.0)));
+    return v * sign(dot(v, dir));
+}
+
+float ambientOcclusion(vec4 point, vec4 normal, float maxDist, float falloff, vec4 boxMin, vec4 boxMax, float values[8]) {
+#ifndef USE_AMBIENT_OCCLUSION
+    return 1.0;
+#else
+#ifdef CLASSIC_AMBIENT_OCCLUSION
+    float ao = 0.0;
+	const int nbIte = 6;
+    for(int i = 0; i < nbIte; i++) {
+        float l = hash(float(i)) * maxDist;
+        vec4 rd = normal * l;
+        
+        ao += (l - max(getNodeDistance(point + rd, boxMin, boxMax, values), 0.0)) / maxDist * falloff;
+    }
+	
+    return clamp( 1.0 - ao / float(nbIte), 0.0, 1.0);
+#else
+    const int nbIte = 32;
+    const float nbIteInv = 1.0 / float(nbIte);
+    const float rad = 1.0 - 1.0 * nbIteInv; //Hemispherical factor (self occlusion correction)
+
+    float ao = 0.0;
+
+    for(int i = 0; i < nbIte; i++) {
+        float l = hash(float(i)) * maxDist;
+        vec4 rd = normalize(normal + randomHemisphereDir(normal, l) * rad) * l; // mix direction with the normal for self occlusion problems!
+
+        ao += (l - max(getNodeDistance(point + rd, boxMin, boxMax, values), 0.0)) / maxDist * falloff;
+    }
+
+    return clamp(1.0 - ao * nbIteInv, 0.0, 1.0);
+#endif
+#endif
+}
+
 Hit hitGrid(uint grid, Ray ray) {
     const float minDist = 0.001;
     const float maxDist = 1000.0;
@@ -505,8 +577,21 @@ Hit hitGrid(uint grid, Ray ray) {
     if (abs(d) > maxDist || count >= 1000 || !insideBox(position, vec4(-1.0, -1.0, -1.0, 1.0), vec4(1.0, 1.0, 1.0, 1.0))) {
         return noHit();
     }
+    uvec3 pos = uvec3(vec3(position + 1.0) * 0.5 * vec3(grids[grid].size - 1));
+    uint index = pos.x + pos.y * grids[grid].size.x + pos.z * grids[grid].size.x * grids[grid].size.y;
 
-    return isHit(t, ray, normalize(inverse(grids[grid].inverseMatrix) * getGridNormal(position, grids[grid])), vec2(0.0, 0.0), grids[grid].material, false);
+    float values[8];
+    for (uint i = 0; i < 8; i++) {
+        uvec3 off = uvec3(i % 2, (i >> 1) % 2, i >> 2);
+        values[i] = SDFGrid[grids[grid].index + index + off.x + off.y * grids[grid].size.x + off.z * grids[grid].size.x * grids[grid].size.y];
+    }
+
+    vec3 boxMin = 2.0 * vec3(pos) / vec3(grids[grid].size - 1) - 1.0;
+    vec3 boxMax = 2.0 * vec3(pos + 1) / vec3(grids[grid].size - 1) - 1.0;
+
+    vec4 normal = getGridNormal(position, grids[grid]);
+
+    return isSTHit(t, ray, normalize(inverse(grids[grid].inverseMatrix) * normal), vec2(0.0, 0.0), grids[grid].material, ambientOcclusion(position, normal, 4.0, 2.0, vec4(boxMin, 1.0), vec4(boxMax, 1.0), values));
 }
 
 float evalCubic(float t, float a, float b, float c, float d) {
@@ -647,6 +732,7 @@ Hit hitOctree(uint octree, Ray ray) {
 
     float minT = -1.0;
     vec4 normal = vec4(0.0, 0.0, 0.0, 0.0);
+    float ao = 1.0;
 
     float t = hitAABB(octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax, r);
 
@@ -696,6 +782,7 @@ Hit hitOctree(uint octree, Ray ray) {
                         if ((minT < 0.0 || tc < minT) && tc >= t && insideBox(r.origin + tc * r.direction, octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax)) {
                             minT = tc;
                             normal = getNodeNormal(r.origin + minT * r.direction, octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax, octreeNodes[index + offset].values);
+                            ao = ambientOcclusion(r.origin + minT * r.direction, normal, 4.0, 2.0, octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax, octreeNodes[index + offset].values);
                         }
 #else
 #ifdef USE_NEWTOWNS
@@ -735,6 +822,7 @@ Hit hitOctree(uint octree, Ray ray) {
                                 if ((minT < 0.0 || tc < minT) && tc >= t && insideBox(r.origin + tc * r.direction, octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax)) {
                                     minT = tc;
                                     normal = getNodeNormal(r.origin + minT * r.direction, octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax, octreeNodes[index + offset].values);
+                                    ao = ambientOcclusion(r.origin + minT * r.direction, normal, 4.0, 2.0, octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax, octreeNodes[index + offset].values);
                                 }
                             } else {
                                 float x = -qc / qb;
@@ -744,6 +832,7 @@ Hit hitOctree(uint octree, Ray ray) {
                                     if ((minT < 0.0 || tc < minT) && tc >= t && insideBox(r.origin + tc * r.direction, octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax)) {
                                         minT = tc;
                                         normal = getNodeNormal(r.origin + minT * r.direction, octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax, octreeNodes[index + offset].values);
+                                        ao = ambientOcclusion(r.origin + minT * r.direction, normal, 4.0, 2.0, octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax, octreeNodes[index + offset].values);
                                     }
                                 }
 
@@ -761,6 +850,7 @@ Hit hitOctree(uint octree, Ray ray) {
                                     if ((minT < 0.0 || tc < minT) && tc >= t && insideBox(r.origin + tc * r.direction, octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax)) {
                                         minT = tc;
                                         normal = getNodeNormal(r.origin + minT * r.direction, octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax, octreeNodes[index + offset].values);
+                                        ao = ambientOcclusion(r.origin + minT * r.direction, normal, 4.0, 2.0, octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax, octreeNodes[index + offset].values);
                                     }
                                 }
 
@@ -778,6 +868,7 @@ Hit hitOctree(uint octree, Ray ray) {
                                     if ((minT < 0.0 || tc < minT) && tc >= t && insideBox(r.origin + tc * r.direction, octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax)) {
                                         minT = tc;
                                         normal = getNodeNormal(r.origin + minT * r.direction, octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax, octreeNodes[index + offset].values);
+                                        ao = ambientOcclusion(r.origin + minT * r.direction, normal, 4.0, 2.0, octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax, octreeNodes[index + offset].values);
                                     }
                                 }
                             }
@@ -797,6 +888,7 @@ Hit hitOctree(uint octree, Ray ray) {
                                     if ((minT < 0.0 || tc < minT) && tc >= t && insideBox(r.origin + tc * r.direction, octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax)) {
                                         minT = tc;
                                         normal = getNodeNormal(r.origin + minT * r.direction, octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax, octreeNodes[index + offset].values);
+                                        ao = ambientOcclusion(r.origin + minT * r.direction, normal, 4.0, 2.0, octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax, octreeNodes[index + offset].values);
                                     }
                                 }
                             }
@@ -807,6 +899,7 @@ Hit hitOctree(uint octree, Ray ray) {
                                     if ((minT < 0.0 || tc < minT) && tc >= t && insideBox(r.origin + tc * r.direction, octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax)) {
                                         minT = tc;
                                         normal = getNodeNormal(r.origin + minT * r.direction, octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax, octreeNodes[index + offset].values);
+                                        ao = ambientOcclusion(r.origin + minT * r.direction, normal, 4.0, 2.0, octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax, octreeNodes[index + offset].values);
                                     }
                                 }
                             }
@@ -825,6 +918,7 @@ Hit hitOctree(uint octree, Ray ray) {
                                 if ((minT < 0.0 || tc < minT) && tc >= t && insideBox(r.origin + tc * r.direction, octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax)) {
                                     minT = tc;
                                     normal = getNodeNormal(r.origin + minT * r.direction, octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax, octreeNodes[index + offset].values);
+                                    ao = ambientOcclusion(r.origin + minT * r.direction, normal, 4.0, 2.0, octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax, octreeNodes[index + offset].values);
                                 }
                             }
 
@@ -842,6 +936,7 @@ Hit hitOctree(uint octree, Ray ray) {
                                 if ((minT < 0.0 || tc < minT) && tc >= t && insideBox(r.origin + tc * r.direction, octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax)) {
                                     minT = tc;
                                     normal = getNodeNormal(r.origin + minT * r.direction, octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax, octreeNodes[index + offset].values);
+                                    ao = ambientOcclusion(r.origin + minT * r.direction, normal, 4.0, 2.0, octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax, octreeNodes[index + offset].values);
                                 }
                             }
 
@@ -859,6 +954,7 @@ Hit hitOctree(uint octree, Ray ray) {
                                 if ((minT < 0.0 || tc < minT) && tc >= t && insideBox(r.origin + tc * r.direction, octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax)) {
                                     minT = tc;
                                     normal = getNodeNormal(r.origin + minT * r.direction, octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax, octreeNodes[index + offset].values);
+                                    ao = ambientOcclusion(r.origin + minT * r.direction, normal, 4.0, 2.0, octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax, octreeNodes[index + offset].values);
                                 }
                             }
                         } else {
@@ -876,6 +972,7 @@ Hit hitOctree(uint octree, Ray ray) {
                                 if ((minT < 0.0 || tc < minT) && tc >= t && insideBox(r.origin + tc * r.direction, octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax)) {
                                     minT = tc;
                                     normal = getNodeNormal(r.origin + minT * r.direction, octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax, octreeNodes[index + offset].values);
+                                    ao = ambientOcclusion(r.origin + minT * r.direction, normal, 4.0, 2.0, octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax, octreeNodes[index + offset].values);
                                 }
                             }
                         }
@@ -898,6 +995,7 @@ Hit hitOctree(uint octree, Ray ray) {
                             if (minT < 0.0 || t < minT) {
                                 minT = t;
                                 normal = getNodeNormal(r.origin + minT * r.direction, octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax, octreeNodes[index + offset].values);
+                                ao = ambientOcclusion(r.origin + minT * r.direction, normal, 4.0, 2.0, octreeNodes[index + offset].boxMin, octreeNodes[index + offset].boxMax, octreeNodes[index + offset].values);
                             }
                         }
 #endif
@@ -917,7 +1015,7 @@ Hit hitOctree(uint octree, Ray ray) {
         return noHit();
     }
 
-    return isHit(minT, ray, normalize(inverse(octrees[octree].inverseMatrix) * normal), vec2(0.0, 0.0), octrees[octree].material, false);
+    return isSTHit(minT, ray, normalize(inverse(octrees[octree].inverseMatrix) * normal), vec2(0.0, 0.0), octrees[octree].material, ao);
 }
 
 Hit raycast(Ray ray) {
@@ -1018,9 +1116,8 @@ vec4 raytrace() {
     Hit h = raycast(ray);
 
     if (h.t > epsilon) {
-        return (h.normal + 1.0) * 0.5;
         uint hitCount = 1;
-        vec4 color = h.material.color * getLightColor(h);
+        vec4 color = h.material.color * getLightColor(h) * h.ambientOcclusion;
 
         while (h.material.reflective > epsilon && hitCount < maxHitCount) {
             float refl = h.material.reflective;
@@ -1029,7 +1126,7 @@ vec4 raytrace() {
             ray.direction = reflect(ray.direction, h.normal);
             h = raycast(ray);
             if (h.t > epsilon) {
-                color = h.material.color * refl * getLightColor(h) + color * (1.0 - refl);
+                color = h.material.color * refl * getLightColor(h) * h.ambientOcclusion + color * (1.0 - refl);
             } else {
                 color = skyColor(ray.direction) * refl + color * (1.0 - refl);
                 break;
